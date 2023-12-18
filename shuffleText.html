@@ -122,10 +122,9 @@
       downloadLink.href = canvas.toDataURL('image/png');
       downloadLink.download = 'shredded_image.png';
       downloadLink.click();
-
       var blob = dataURItoBlob(downloadLink.href);
       var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
-
+      
       const formData = new FormData();
       formData.append('file', restoreFile);
       formData.append('upload_preset', 'crypto-uploaded');
@@ -163,6 +162,7 @@
       var blob = dataURItoBlob(downloadLink.href);
       var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
 
+      
       const formData = new FormData();
       formData.append('file', restoreFile);
       formData.append('upload_preset', 'crypto-uploaded');
