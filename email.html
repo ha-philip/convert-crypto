@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Composer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+
+    #emailContent {
+      width: 100%;
+      /* 스크롤이 생기도록 설정 */
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+
+    #outputImages {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      height: 200px;
+      overflow-y: scroll;
+    }
+
+    .attached-image {
+      max-width: calc(50% - 10px);
+      /* 이미지가 창에 잘 들어갈 수 있도록 조정 */
+      height: auto;
+    }
+
+    button {
+      padding: 10px;
+
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin: 3px;
+      cursor: pointer;
+    }
+
+    .sbutton {
+      background-color: #4caf50;
+    }
+
+    .rbutton {
+      background-color: #af564c;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="index.html" style="color: black;">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      style="width: 30px; height: 30px; margin: 20px;">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+    </svg>
+  </a>
+  <label for="emailAddress">Email Address:</label>
+  <input type="email" id="emailAddress" placeholder="Enter email address">
+
+  <label for="emailSubject">Subject:</label>
+  <input type="text" id="emailSubject" placeholder="Enter email subject">
+
+  <label for="emailContent">Content:</label>
+  <div id="emailContent">
+    <textarea placeholder="Enter email content"></textarea>
+    <button class="sbutton" onClick="location.href='eShuffleText.html'">Text Shuffle</button>
+  </div>
+
+  <div>
+    <label>Attachments:</label>
+    <button onClick="location.href='eShuffleImg.html'" class="sbutton">Image Shuffle</button>
+    <div id="outputImages"></div>
+    <input type="file" id="attachmentInput" accept="image/*">
+    <div style="display: flex;">
+      <button onclick="addAttachment()" class="sbutton">Add</button>
+      <button class="rbutton" onClick="resetAtt()">Reset</button>
+    </div>
+    <hr />
+  </div>
+
+  <button onclick="sendEmail()" class="sbutton">Send Email</button>
+
+  <script>
+
+    var attachments = [];
+    var fileName = []
+
+    function addAttachment() {
+      var attachmentInput = document.getElementById('attachmentInput');
+      var outputImages = document.getElementById('outputImages');
+
+      var file = attachmentInput.files[0];
+      if (file) {
+        var imageURL = URL.createObjectURL(file);
+
+        // Display image on the page
+        var imgElement = document.createElement('img');
+        imgElement.src = imageURL;
+        imgElement.classList.add('attached-image'); // Add a class for styling
+        outputImages.appendChild(imgElement);
+
+        // Save image URL for sending email
+        attachments.push(imageURL);
+        fileName.push(file);
+        // Clear file input
+        attachmentInput.value = null;
+      }
+    }
+
+    function sendEmail() {
+      var emailAddress = document.getElementById('emailAddress').value;
+      var emailSubject = document.getElementById('emailSubject').value;
+      var emailContent = document.querySelector('#emailContent textarea').value;
+
+      // Download each attached image
+      attachments.forEach(async function (imageURL, index) {
+        var downloadLink = document.createElement('a');
+        downloadLink.href = imageURL;
+        downloadLink.download = 'attached_image_' + (index + 1) + '.png';
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+
+        const formData = new FormData();
+
+        formData.append('file', fileName[index]);
+        formData.append('upload_preset', 'crypto-uploads');
+        const datas = await fetch('https://api.cloudinary.com/v1_1/dgmgeotyk/image/upload', {
+            method: 'POST',
+            body: formData
+          }).then(r => r.json());
+        document.body.removeChild(downloadLink);
+    });
+      // You can replace this with your actual email sending logic
+      console.log('Email Address:', emailAddress);
+      console.log('Subject:', emailSubject);
+      console.log('Content:', emailContent);
+      console.log('Attachments:', attachments);
+      // Reset the form
+      document.getElementById('emailAddress').value = '';
+      document.getElementById('emailSubject').value = '';
+      document.querySelector('#emailContent textarea').value = '';
+
+      // Remove attached images from the DOM
+      resetAtt();
+      window.open(`localhost:8080`, '_blank');
+  }
+    function resetAtt() {
+      var attachedImages = document.querySelectorAll('.attached-image');
+      attachedImages.forEach(function (image) {
+        image.parentNode.removeChild(image);
+      });
+      attachments = [];
+      fileName = [];
+    }
+  </script>
+</body>
+
+</html>

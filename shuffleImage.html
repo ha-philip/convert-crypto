@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css" type="text/css" />
+  <title>Image Shuffling Example</title>
+</head>
+
+<body>
+  <a href="index.html" style="color: black;">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      style="width: 30px; height: 30px; margin: 20px;">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+    </svg>
+  </a>
+  <div class="Divide">
+    <div class="imageShuffle">
+      <h2 class="image_title">이미지 암호화</h2>
+      <input type="file" id="imageInput" accept="image/*">
+      <canvas id="shuffledCanvas" width="300" height="300"></canvas>
+      <div class="buttonSetting1">
+        <button onclick="shuffleImage()">Shuffle Image</button>
+        <button onclick="downloadShuffled()">Download Shuffled Image</button>
+      </div>
+    </div>
+    <div class="imageShuffle">
+      <h2 class="image_title">이미지 복호화</h2>
+      <input type="file" id="shreddedInput" accept="image/*">
+      <canvas id="restoredCanvas" width="300" height="300"></canvas>
+      <div class="buttonSetting2">
+        <button onclick="restoreFromLocal()">Restore from Local</button>
+        <button onclick="downloadRestoredLocal()">Download Restored Image (Local)</button>
+        <button onclick="restoreImage()">Restore Image</button>
+        <button onclick="downloadRestored()">Download Restored Image</button>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+  var originalImageData = null;
+  var shreddedImageData = null;
+
+  function shuffleImage() {
+    var input = document.getElementById('imageInput');
+    var shuffledCanvas = document.getElementById('shuffledCanvas');
+    var ctx = shuffledCanvas.getContext('2d');
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.src = e.target.result;
+
+      img.onload = function () {
+        ctx.clearRect(0, 0, shuffledCanvas.width, shuffledCanvas.height);
+        ctx.drawImage(img, 0, 0, shuffledCanvas.width, shuffledCanvas.height);
+
+        // 이미지 데이터를 얻어오고 셔플링
+        originalImageData = ctx.getImageData(0, 0, shuffledCanvas.width, shuffledCanvas.height);
+        var shuffledData = shuffle(Array.from(originalImageData.data));
+
+        // 이미지 데이터에 셔플링된 데이터 적용
+        var imageData = new ImageData(new Uint8ClampedArray(shuffledData), shuffledCanvas.width, shuffledCanvas.height);
+        ctx.clearRect(0, 0, shuffledCanvas.width, shuffledCanvas.height);
+        ctx.putImageData(imageData, 0, 0);
+      };
+    };
+
+    // 파일을 읽어오기
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  function restoreImage() {
+    if (!originalImageData) {
+      alert("이미지를 먼저 셔플링하세요.");
+      return;
+    }
+
+    var shuffledCanvas = document.getElementById('shuffledCanvas');
+    var restoredCanvas = document.getElementById('restoredCanvas');
+    var shuffledCtx = shuffledCanvas.getContext('2d');
+    var restoredCtx = restoredCanvas.getContext('2d');
+
+    // 셔플링된 캔버스에서 이미지 데이터 얻어오기
+    var shuffledData = Array.from(originalImageData.data);
+
+    // 이미지 데이터를 얻어오고 복원
+    var restoredData = restore(shuffledData);
+    var restoredImageData = new ImageData(new Uint8ClampedArray(restoredData), shuffledCanvas.width, shuffledCanvas.height);
+    restoredCtx.clearRect(0, 0, restoredCanvas.width, restoredCanvas.height);
+    restoredCtx.putImageData(restoredImageData, 0, 0);
+  }
+
+  async function restoreFromLocal() {
+    var shreddedInput = document.getElementById('shreddedInput');
+    var restoredCanvas = document.getElementById('restoredCanvas');
+    var ctx = restoredCanvas.getContext('2d');
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.src = e.target.result;
+
+      img.onload = function () {
+        ctx.clearRect(0, 0, restoredCanvas.width, restoredCanvas.height);
+        ctx.drawImage(img, 0, 0, restoredCanvas.width, restoredCanvas.height);
+
+        // 이미지 데이터를 얻어오고 파쇄화
+        shreddedImageData = ctx.getImageData(0, 0, restoredCanvas.width, restoredCanvas.height);
+      };
+    };
+
+    // 파일을 읽어오기
+    reader.readAsDataURL(shreddedInput.files[0]);
+  }
+
+  async function downloadShuffled() {
+    if (!originalImageData) {
+      alert("이미지를 먼저 셔플링하세요.");
+      return;
+    }
+
+    var shuffledCanvas = document.getElementById('shuffledCanvas');
+    var downloadLink = document.createElement('a');
+    downloadLink.href = shuffledCanvas.toDataURL('image/png');
+    downloadLink.download = 'shuffled_image.png';
+    downloadLink.click();
+    
+    var blob = dataURItoBlob(downloadLink.href);
+    var restoreFile = new File([blob], 'shuffled_image.png', { type: 'image/png' });
+
+    console.log(restoreFile);
+    const formData = new FormData();
+    formData.append('file', restoreFile);
+    formData.append('upload_preset', 'crypto-uploads');
+    const datas = await fetch('https://api.cloudinary.com/v1_1/dgmgeotyk/image/upload', {
+      method: 'POST',
+      body: formData
+    }).then(r => r.json());
+
+    if(datas) {
+      window.open(datas.secure_url, '_blank');
+    }
+  }
+
+ async function downloadRestored () {
+    if (!originalImageData) {
+      alert("이미지를 먼저 셔플링하세요.");
+      return;
+    }
+
+    var restoredCanvas = document.getElementById('restoredCanvas');
+    var downloadLink = document.createElement('a');
+    downloadLink.href = restoredCanvas.toDataURL('image/png');
+    downloadLink.download = 'restored_image.png';
+
+    var blob = dataURItoBlob(downloadLink.href);
+    var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
+ 
+    console.log(restoreFile);
+    const formData = new FormData();
+    formData.append('file', restoreFile);
+    formData.append('upload_preset', 'crypto-uploads');
+    const datas = await fetch('https://api.cloudinary.com/v1_1/dgmgeotyk/image/upload', {
+      method: 'POST',
+      body: formData
+    }).then(r => r.json());
+
+    if(datas) {
+      window.open(datas.secure_url, '_blank');
+    }
+  }
+
+  function downloadRestoredLocal() {
+    if (!shreddedImageData) {
+      alert("로컬에서 불러온 이미지를 먼저 복원하세요.");
+      return;
+    }
+
+    var restoredCanvas = document.getElementById('restoredCanvas');
+    var restoredCtx = restoredCanvas.getContext('2d');
+
+    // 복원된 데이터를 캔버스에 적용
+    var restoredData = restore(Array.from(shreddedImageData.data));
+    var restoredImageData = new ImageData(new Uint8ClampedArray(restoredData), restoredCanvas.width, restoredCanvas.height);
+    restoredCtx.putImageData(restoredImageData, 0, 0);
+
+    // 캔버스를 이미지로 변환하여 다운로드
+    var downloadLink = document.createElement('a');
+    downloadLink.href = restoredCanvas.toDataURL('image/png');
+    downloadLink.download = 'restored_image_local.png';
+    downloadLink.click();
+
+  }
+
+  function shuffle(data) {
+    var shuffledData = data.slice();
+    for (var i = shuffledData.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = shuffledData[i];
+      shuffledData[i] = shuffledData[j];
+      shuffledData[j] = temp;
+    }
+    return shuffledData;
+  }
+
+  function restore(data) {
+    // originalImageData의 데이터를 기반으로 다시 섞음
+    var restoredData = data.slice();
+    for (var i = 0; i < originalImageData.data.length; i++) {
+      restoredData[i] = originalImageData.data[i];
+    }
+    return restoredData;
+  }
+  function dataURItoBlob(dataURI) {
+  var byteString = atob(dataURI.split(',')[1]);
+  var ab = new ArrayBuffer(byteString.length);
+  var ia = new Uint8Array(ab);
+  for (var i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([ab], { type: 'image/png' });
+}
+</script>
+
+</html>

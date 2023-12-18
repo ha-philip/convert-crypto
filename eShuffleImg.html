@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css" type="text/css" />
+  <title>Image Shuffling Example</title>
+</head>
+
+<body>
+  <a href="email.html" style="color: black;">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      style="width: 30px; height: 30px; margin: 20px;">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+    </svg>
+  </a>
+  <div class="Divide">
+    <div class="imageShuffle">
+      <h2 class="image_title">이미지 암호화</h2>
+      <input type="file" id="imageInput" accept="image/*">
+      <canvas id="shuffledCanvas" width="300" height="300"></canvas>
+      <div class="buttonSetting1">
+        <button onclick="shuffleImage()">Shuffle Image</button>
+        <button onclick="downloadShuffled()">Download Shuffled Image</button>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+  var originalImageData = null;
+  var shreddedImageData = null;
+
+  function shuffleImage() {
+    var input = document.getElementById('imageInput');
+    var shuffledCanvas = document.getElementById('shuffledCanvas');
+    var ctx = shuffledCanvas.getContext('2d');
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.src = e.target.result;
+
+      img.onload = function () {
+        ctx.clearRect(0, 0, shuffledCanvas.width, shuffledCanvas.height);
+        ctx.drawImage(img, 0, 0, shuffledCanvas.width, shuffledCanvas.height);
+
+        // 이미지 데이터를 얻어오고 셔플링
+        originalImageData = ctx.getImageData(0, 0, shuffledCanvas.width, shuffledCanvas.height);
+        var shuffledData = shuffle(Array.from(originalImageData.data));
+
+        // 이미지 데이터에 셔플링된 데이터 적용
+        var imageData = new ImageData(new Uint8ClampedArray(shuffledData), shuffledCanvas.width, shuffledCanvas.height);
+        ctx.clearRect(0, 0, shuffledCanvas.width, shuffledCanvas.height);
+        ctx.putImageData(imageData, 0, 0);
+      };
+    };
+
+    // 파일을 읽어오기
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  async function downloadShuffled() {
+    if (!originalImageData) {
+      alert("이미지를 먼저 셔플링하세요.");
+      return;
+    }
+
+    var shuffledCanvas = document.getElementById('shuffledCanvas');
+    var downloadLink = document.createElement('a');
+    downloadLink.href = shuffledCanvas.toDataURL('image/png');
+    downloadLink.download = 'shuffled_image.png';
+    downloadLink.click();
+    
+    // var blob = dataURItoBlob(downloadLink.href);
+    // var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
+
+    // const formData = new FormData();
+    // formData.append('file', restoreFile);
+    // formData.append('upload_preset', 'crypto-uploads');
+    // const datas = await fetch('https://api.cloudinary.com/v1_1/dgmgeotyk/image/upload', {
+    //   method: 'POST',
+    //   body: formData
+    // }).then(r => r.json());
+
+    // if(datas) {
+    //   window.open(datas.secure_url, '_blank');
+    // }
+  }
+
+  function shuffle(data) {
+    var shuffledData = data.slice();
+    for (var i = shuffledData.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = shuffledData[i];
+      shuffledData[i] = shuffledData[j];
+      shuffledData[j] = temp;
+    }
+    return shuffledData;
+  }
+</script>
+
+</html>

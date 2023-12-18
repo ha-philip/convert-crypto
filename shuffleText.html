@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css" type="text/css" />
+  <title>Text to Image Shredder and Restorer</title>
+</head>
+
+<body>
+  <a href="index.html" style="color: black;">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+      style="width: 30px; height: 30px; margin: 20px;">
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+    </svg>
+  </a>
+  <div class="Divide">
+    <div class="imageShuffle">
+      <h2 class="image_title">텍스트 암호화</h2>
+      <textarea id="textInput" placeholder="Enter your text" class="tarea" rows="5"></textarea>
+      <canvas id="outputCanvas"></canvas>
+      <div class="buttonSetting3">
+        <button onclick="textToImage()" style="grid-column: span 2;">Convert to Image</button>
+        <button onclick="shredImage()">Shred Image</button>
+        <button onclick="downloadShredded()">Download Shredded Image</button>
+      </div>
+    </div>
+    <div class="imageShuffle">
+      <h2 class="image_title">텍스트 복호화</h2>
+      <input type="file" id="shreddedInput" accept="image/*">
+      <div class="buttonSetting4">
+        <button onclick="restoreImage()">Restore Image</button>
+        <button onclick="downloadRestored()">Download Restored Image</button>
+        <button onclick="restoreFromLocal()">Restore from Local</button>
+        <button onclick="downloadRestoredLocal()">Download Restored Image (Local)</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    var originalImageData = null;
+    var shreddedImageData = null;
+
+    function textToImage() {
+      var textInput = document.getElementById('textInput').value;
+      var outputCanvas = document.getElementById('outputCanvas');
+      var ctx = outputCanvas.getContext('2d');
+
+      // 캔버스를 텍스트로 초기화
+      ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+      ctx.font = '20px Arial';
+
+      // 텍스트를 세로로 출력
+      var lines = textInput.split('\n');
+      var lineHeight = 30;
+
+      // 이미지 데이터를 얻어오기 전에 캔버스 크기를 동적으로 설정
+      ctx.canvas.width = outputCanvas.width;
+      ctx.canvas.height = lineHeight * lines.length;
+
+      ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+      lines.forEach(function (line, index) {
+        ctx.fillText(line, 10, lineHeight * (index + 1));
+      });
+
+      // 이미지 데이터를 얻어오기
+      originalImageData = ctx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+    }
+    function shredImage() {
+      if (!originalImageData) {
+        alert("이미지를 먼저 생성하세요.");
+        return;
+      }
+
+      var outputCanvas = document.getElementById('outputCanvas');
+      var ctx = outputCanvas.getContext('2d');
+
+      // 이미지 데이터를 얻어오고 파쇄화
+      shreddedImageData = shuffle(Array.from(originalImageData.data));
+
+      // 이미지 데이터에 파쇄화된 데이터 적용
+      var imageData = new ImageData(new Uint8ClampedArray(shreddedImageData), outputCanvas.width, outputCanvas.height);
+      ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function restoreImage() {
+      if (!shreddedImageData) {
+        alert("이미지를 먼저 파쇄화하세요.");
+        return;
+      }
+
+      var outputCanvas = document.getElementById('outputCanvas');
+      var ctx = outputCanvas.getContext('2d');
+
+      // 이미지 데이터를 얻어오고 복원
+      var restoredData = restore(shreddedImageData);
+      var restoredImageData = new ImageData(new Uint8ClampedArray(restoredData), outputCanvas.width, outputCanvas.height);
+      ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+      ctx.putImageData(restoredImageData, 0, 0);
+    }
+
+    async function downloadShredded() {
+      if (!shreddedImageData) {
+        alert("파쇄화된 이미지가 없습니다.");
+        return;
+      }
+
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      canvas.width = outputCanvas.width;
+      canvas.height = outputCanvas.height;
+
+      // 파쇄화된 데이터를 캔버스에 적용
+      var imageData = new ImageData(new Uint8ClampedArray(shreddedImageData), outputCanvas.width, outputCanvas.height);
+      ctx.putImageData(imageData, 0, 0);
+
+      // 캔버스를 이미지로 변환하여 다운로드
+      var downloadLink = document.createElement('a');
+      downloadLink.href = canvas.toDataURL('image/png');
+      downloadLink.download = 'shredded_image.png';
+      downloadLink.click();
+
+      var blob = dataURItoBlob(downloadLink.href);
+      var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
+
+      const formData = new FormData();
+      formData.append('file', restoreFile);
+      formData.append('upload_preset', 'crypto-uploads');
+      const datas = await fetch('https://api.cloudinary.com/v1_1/dgmgeotyk/image/upload', {
+        method: 'POST',
+        body: formData
+      }).then(r => r.json());
+
+      if (datas) {
+        window.open(datas.secure_url, '_blank');
+      }
+    }
+
+    async function downloadRestored() {
+      if (!shreddedImageData) {
+        alert("파쇄화된 이미지를 먼저 복원하세요.");
+        return;
+      }
+
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      canvas.width = outputCanvas.width;
+      canvas.height = outputCanvas.height;
+
+      // 복원된 데이터를 캔버스에 적용
+      var restoredData = restore(shreddedImageData);
+      var restoredImageData = new ImageData(new Uint8ClampedArray(restoredData), outputCanvas.width, outputCanvas.height);
+      ctx.putImageData(restoredImageData, 0, 0);
+
+      // 캔버스를 이미지로 변환하여 다운로드
+      var downloadLink = document.createElement('a');
+      downloadLink.href = canvas.toDataURL('image/png');
+      downloadLink.download = 'restored_image.png';
+
+      var blob = dataURItoBlob(downloadLink.href);
+      var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
+
+      const formData = new FormData();
+      formData.append('file', restoreFile);
+      formData.append('upload_preset', 'crypto-uploads');
+      const datas = await fetch('https://api.cloudinary.com/v1_1/dgmgeotyk/image/upload', {
+        method: 'POST',
+        body: formData
+      }).then(r => r.json());
+
+      if (datas) {
+        window.open(datas.secure_url, '_blank');
+      }
+    }
+
+    function downloadRestoredLocal() {
+      if (!shreddedImageData) {
+        alert("로컬에서 불러온 이미지를 먼저 복원하세요.");
+        return;
+      }
+
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      canvas.width = outputCanvas.width;
+      canvas.height = outputCanvas.height;
+
+      // 복원된 데이터를 캔버스에 적용
+      var restoredData = restore(shreddedImageData);
+      var restoredImageData = new ImageData(new Uint8ClampedArray(restoredData), outputCanvas.width, outputCanvas.height);
+      ctx.putImageData(restoredImageData, 0, 0);
+
+      // 캔버스를 이미지로 변환하여 다운로드
+      var downloadLink = document.createElement('a');
+      downloadLink.href = canvas.toDataURL('image/png');
+      downloadLink.download = 'restored_image_local.png';
+      downloadLink.click();
+    }
+
+    function restoreFromLocal() {
+      var shreddedInput = document.getElementById('shreddedInput');
+      var shreddedCanvas = document.getElementById('outputCanvas');
+      var ctx = shreddedCanvas.getContext('2d');
+
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var img = new Image();
+        img.src = e.target.result;
+
+        img.onload = function () {
+          ctx.clearRect(0, 0, shreddedCanvas.width, shreddedCanvas.height);
+          ctx.drawImage(img, 0, 0, shreddedCanvas.width, shreddedCanvas.height);
+
+          // 이미지 데이터를 얻어오고 파쇄화
+          shreddedImageData = ctx.getImageData(0, 0, shreddedCanvas.width, shreddedCanvas.height).data;
+        };
+      };
+
+      // 파일을 읽어오기
+      reader.readAsDataURL(shreddedInput.files[0]);
+    }
+
+    function shuffle(data) {
+      var shuffledData = data.slice();
+      for (var i = shuffledData.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = shuffledData[i];
+        shuffledData[i] = shuffledData[j];
+        shuffledData[j] = temp;
+      }
+      return shuffledData;
+    }
+
+    function restore(data) {
+      // originalImageData의 데이터를 기반으로 다시 섞음
+      var restoredData = data.slice();
+      for (var i = 0; i < originalImageData.data.length; i++) {
+        restoredData[i] = originalImageData.data[i];
+      }
+      return restoredData;
+    }
+    function dataURItoBlob(dataURI) {
+      var byteString = atob(dataURI.split(',')[1]);
+      var ab = new ArrayBuffer(byteString.length);
+      var ia = new Uint8Array(ab);
+      for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      return new Blob([ab], { type: 'image/png' });
+    }
+  </script>
+</body>
+
+</html>
