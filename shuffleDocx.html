@@ -24,12 +24,16 @@
     </div>
     <div class="imageShuffle">
       <div id="fileContents"></div>
-      <canvas id="outputCanvas" width="300" height="300"></canvas>
+      <div class="canvasContainer">
+      <canvas id="outputCanvas"></canvas>
+      </div>
       <div class="buttonSetting3">
         <button onclick="testShredding()">Test Shredding</button>
         <button onclick="testReassembly()">Test Reassembly</button>
         <button onclick="downloadShredded()">Download Shredded</button>
         <button onclick="downloadRestored()">Download Restored</button>
+        <button onclick="sendShredded()">Send Shredded</button>
+        <button onclick="sendRestored()">Send Restored</button>
       </div>
     </div>
   </div>
@@ -100,7 +104,42 @@
       ctx.putImageData(restoredImageData, 0, 0);
     }
 
-    async function downloadShredded() {
+    async function sendShredded() {
+      if (!shreddedImageData) {
+        alert("파쇄화된 이미지가 없습니다.");
+        return;
+      }
+
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      canvas.width = outputCanvas.width;
+      canvas.height = outputCanvas.height;
+
+      // 파쇄화된 데이터를 캔버스에 적용
+      var imageData = new ImageData(new Uint8ClampedArray(shreddedImageData), outputCanvas.width, outputCanvas.height);
+      ctx.putImageData(imageData, 0, 0);
+
+      // 캔버스를 이미지로 변환하여 다운로드
+      var downloadLink = document.createElement('a');
+      downloadLink.href = canvas.toDataURL('image/png');
+      downloadLink.download = 'shredded_image.png';
+
+      var blob = dataURItoBlob(downloadLink.href);
+      var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
+
+      const formData = new FormData();
+      formData.append('file', restoreFile);
+      formData.append('upload_preset', 'crypto-uploaded');
+      const datas = await fetch('https://api.cloudinary.com/v1_1/dv7hpu5oq/image/upload', {
+        method: 'POST',
+        body: formData
+      }).then(r => r.json());
+
+      if (datas) {
+        window.open(datas.secure_url, '_blank');
+      }
+    }
+    function downloadShredded() {
       if (!shreddedImageData) {
         alert("파쇄화된 이미지가 없습니다.");
         return;
@@ -121,9 +160,31 @@
       downloadLink.download = 'shredded_image.png';
       downloadLink.click();
 
+    }
+    async function sendRestored() {
+      if (!shreddedImageData) {
+        alert("파쇄화된 이미지를 먼저 복원하세요.");
+        return;
+      }
+
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      canvas.width = outputCanvas.width;
+      canvas.height = outputCanvas.height;
+
+      // 복원된 데이터를 캔버스에 적용
+      var restoredData = restore(shreddedImageData);
+      var restoredImageData = new ImageData(new Uint8ClampedArray(restoredData), outputCanvas.width, outputCanvas.height);
+      ctx.putImageData(restoredImageData, 0, 0);
+
+      // 캔버스를 이미지로 변환하여 다운로드
+      var downloadLink = document.createElement('a');
+      downloadLink.href = canvas.toDataURL('image/png');
+      downloadLink.download = 'restored_image.png';
+
       var blob = dataURItoBlob(downloadLink.href);
       var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
-
+      
       const formData = new FormData();
       formData.append('file', restoreFile);
       formData.append('upload_preset', 'crypto-uploaded');
@@ -136,8 +197,7 @@
         window.open(datas.secure_url, '_blank');
       }
     }
-
-    async function downloadRestored() {
+    function downloadRestored() {
       if (!shreddedImageData) {
         alert("파쇄화된 이미지를 먼저 복원하세요.");
         return;
@@ -158,21 +218,6 @@
       downloadLink.href = canvas.toDataURL('image/png');
       downloadLink.download = 'restored_image.png';
       downloadLink.click();
-
-      var blob = dataURItoBlob(downloadLink.href);
-      var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
-      
-      const formData = new FormData();
-      formData.append('file', restoreFile);
-      formData.append('upload_preset', 'crypto-uploaded');
-      const datas = await fetch('https://api.cloudinary.com/v1_1/dv7hpu5oq/image/upload', {
-        method: 'POST',
-        body: formData
-      }).then(r => r.json());
-
-      if (datas) {
-        window.open(datas.secure_url, '_blank');
-      }
     }
 
     function downloadRestoredLocal() {

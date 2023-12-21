@@ -21,10 +21,11 @@
       <h2 class="image_title">텍스트 암호화</h2>
       <textarea id="textInput" placeholder="Enter your text" class="tarea" rows="5"></textarea>
       <canvas id="outputCanvas"></canvas>
-      <div class="buttonSetting3">
-        <button onclick="textToImage()" style="grid-column: span 2;">Convert to Image</button>
+      <div class="buttonSetting2">
+        <button onclick="textToImage()">Convert to Image</button>
         <button onclick="shredImage()">Shred Image</button>
         <button onclick="downloadShredded()">Download Shredded Image</button>
+        <button onclick="sendShreddedCloud()">Send Shredded Image to Cloud</button>
       </div>
     </div>
     <div class="imageShuffle">
@@ -32,9 +33,9 @@
       <input type="file" id="shreddedInput" accept="image/*">
       <div class="buttonSetting4">
         <button onclick="restoreImage()">Restore Image</button>
-        <button onclick="downloadRestored()">Download Restored Image</button>
+        <button onclick="downloadRestored()">Send Restored Image to Cloud</button>
         <button onclick="restoreFromLocal()">Restore from Local</button>
-        <button onclick="downloadRestoredLocal()">Download Restored Image (Local)</button>
+        <button onclick="downloadRestoredLocal()">Download Restored Image</button>
       </div>
     </div>
   </div>
@@ -102,7 +103,41 @@
       ctx.putImageData(restoredImageData, 0, 0);
     }
 
-    async function downloadShredded() {
+    async function sendShreddedCloud() {
+      if (!shreddedImageData) {
+        alert("파쇄화된 이미지가 없습니다.");
+        return;
+      }
+
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      canvas.width = outputCanvas.width;
+      canvas.height = outputCanvas.height;
+
+      // 파쇄화된 데이터를 캔버스에 적용
+      var imageData = new ImageData(new Uint8ClampedArray(shreddedImageData), outputCanvas.width, outputCanvas.height);
+      ctx.putImageData(imageData, 0, 0);
+
+      // 캔버스를 이미지로 변환하여 다운로드
+      var downloadLink = document.createElement('a');
+      downloadLink.href = canvas.toDataURL('image/png');
+      downloadLink.download = 'shredded_image.png';
+      var blob = dataURItoBlob(downloadLink.href);
+      var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
+      
+      const formData = new FormData();
+      formData.append('file', restoreFile);
+      formData.append('upload_preset', 'crypto-uploaded');
+      const datas = await fetch('https://api.cloudinary.com/v1_1/dv7hpu5oq/image/upload', {
+        method: 'POST',
+        body: formData
+      }).then(r => r.json());
+
+      if (datas) {
+        window.open(datas.secure_url, '_blank');
+      }
+    }
+    function downloadShredded() {
       if (!shreddedImageData) {
         alert("파쇄화된 이미지가 없습니다.");
         return;
@@ -122,22 +157,7 @@
       downloadLink.href = canvas.toDataURL('image/png');
       downloadLink.download = 'shredded_image.png';
       downloadLink.click();
-      var blob = dataURItoBlob(downloadLink.href);
-      var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
-      
-      const formData = new FormData();
-      formData.append('file', restoreFile);
-      formData.append('upload_preset', 'crypto-uploaded');
-      const datas = await fetch('https://api.cloudinary.com/v1_1/dv7hpu5oq/image/upload', {
-        method: 'POST',
-        body: formData
-      }).then(r => r.json());
-
-      if (datas) {
-        window.open(datas.secure_url, '_blank');
-      }
     }
-
     async function downloadRestored() {
       if (!shreddedImageData) {
         alert("파쇄화된 이미지를 먼저 복원하세요.");

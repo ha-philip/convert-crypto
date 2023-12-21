@@ -21,9 +21,10 @@
       <h2 class="image_title">이미지 암호화</h2>
       <input type="file" id="imageInput" accept="image/*">
       <canvas id="shuffledCanvas" width="300" height="300"></canvas>
-      <div class="buttonSetting1">
-        <button onclick="shuffleImage()">Shuffle Image</button>
+      <div class="buttonSetting3">
+        <button onclick="shuffleImage()" style="grid-column: span 2;">Shuffle Image</button>
         <button onclick="downloadShuffled()">Download Shuffled Image</button>
+        <button onclick="sendCloudShuffled()">Send Shuffled Image to Cloud</button>
       </div>
     </div>
     <div class="imageShuffle">
@@ -32,9 +33,9 @@
       <canvas id="restoredCanvas" width="300" height="300"></canvas>
       <div class="buttonSetting2">
         <button onclick="restoreFromLocal()">Restore from Local</button>
-        <button onclick="downloadRestoredLocal()">Download Restored Image (Local)</button>
+        <button onclick="downloadRestoredLocal()">Download Restored Image</button>
         <button onclick="restoreImage()">Restore Image</button>
-        <button onclick="downloadRestored()">Download Restored Image</button>
+        <button onclick="downloadRestored()">Send Restored Image to Cloud</button>
       </div>
     </div>
   </div>
@@ -116,7 +117,7 @@
     reader.readAsDataURL(shreddedInput.files[0]);
   }
 
-  async function downloadShuffled() {
+  function downloadShuffled() {
     if (!originalImageData) {
       alert("이미지를 먼저 셔플링하세요.");
       return;
@@ -128,10 +129,21 @@
     downloadLink.download = 'shuffled_image.png';
     downloadLink.click();
     
+  }
+  async function sendCloudShuffled() {
+    if (!originalImageData) {
+      alert("이미지를 먼저 셔플링하세요.");
+      return;
+    }
+
+    var shuffledCanvas = document.getElementById('shuffledCanvas');
+    var downloadLink = document.createElement('a');
+    downloadLink.href = shuffledCanvas.toDataURL('image/png');
+    downloadLink.download = 'shuffled_image.png';
+    
     var blob = dataURItoBlob(downloadLink.href);
     var restoreFile = new File([blob], 'shuffled_image.png', { type: 'image/png' });
 
-    console.log(restoreFile);
     const formData = new FormData();
     formData.append('file', restoreFile);
     formData.append('upload_preset', 'crypto-uploaded');
@@ -144,6 +156,7 @@
       window.open(datas.secure_url, '_blank');
     }
   }
+
 
  async function downloadRestored () {
     if (!originalImageData) {
@@ -159,7 +172,6 @@
     var blob = dataURItoBlob(downloadLink.href);
     var restoreFile = new File([blob], 'restored_image.png', { type: 'image/png' });
  
-    console.log(restoreFile);
     const formData = new FormData();
     formData.append('file', restoreFile);
     formData.append('upload_preset', 'crypto-uploaded');

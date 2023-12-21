@@ -98,7 +98,7 @@
   </div>
 
   <button onclick="sendEmail()" class="sbutton">Send Email</button>
-
+  <button onclick="downloadEmail()" class="sbutton">Download Email</button>
   <script>
 
     var attachments = [];
@@ -147,6 +147,36 @@
             method: 'POST',
             body: formData
           }).then(r => r.json());
+        document.body.removeChild(downloadLink);
+    });
+      // You can replace this with your actual email sending logic
+      console.log('Email Address:', emailAddress);
+      console.log('Subject:', emailSubject);
+      console.log('Content:', emailContent);
+      console.log('Attachments:', attachments);
+      // Reset the form
+      document.getElementById('emailAddress').value = '';
+      document.getElementById('emailSubject').value = '';
+      document.querySelector('#emailContent textarea').value = '';
+
+      // Remove attached images from the DOM
+      resetAtt();
+      window.open(`localhost:8080`, '_blank');
+  }
+  function downloadEmail() {
+      var emailAddress = document.getElementById('emailAddress').value;
+      var emailSubject = document.getElementById('emailSubject').value;
+      var emailContent = document.querySelector('#emailContent textarea').value;
+
+      // Download each attached image
+      attachments.forEach(function (imageURL, index) {
+        var downloadLink = document.createElement('a');
+        downloadLink.href = imageURL;
+        downloadLink.download = 'attached_image_' + (index + 1) + '.png';
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+       
         document.body.removeChild(downloadLink);
     });
       // You can replace this with your actual email sending logic
